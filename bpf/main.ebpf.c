@@ -26,6 +26,13 @@ struct {
   __type(value, u32);
 } restricted_files SEC(".maps");
 
+struct {
+  __uint(type, BPF_MAP_TYPE_HASH);
+  __uint(max_entries, MAX_ENTRIES);
+  __type(key, char[BUFFER_LENGTH]);
+  __type(value, u32);
+} restricted_directories SEC(".maps");
+
 char LICENSE[] SEC("license") = "GPL";
 
 SEC("tracepoint/syscalls/sys_enter_openat")
@@ -58,10 +65,13 @@ int check_files(struct trace_event_raw_sys_exit *ctx) {
 
 SEC("lsm/file_open")
 int BPF_PROG(restrict_file_access, struct file *file, int mask) {
-  const unsigned char *name = file->f_path.dentry->d_name.name;
-  char filename[BUFFER_LENGTH] = {0};
-  bpf_probe_read_kernel_str(&filename, sizeof(filename), name);
-  if (bpf_map_lookup_elem(&restricted_files, &filename) != NULL) {
+  char name[BUFFER_LENGTH] = {0};
+  if (bpf_d_path((struct path *)&file->f_path, name, sizeof(name)) < 0) {
+    return 0;
+  }
+  char path[BUFFER_LENGTH] = {0};
+  bpf_probe_read_kernel_str(&path, sizeof(path), name);
+  if (bpf_map_lookup_elem(&restricted_files, &path) != NULL) {
     return -EACCES;
   }
   return 0;
@@ -70,10 +80,12 @@ int BPF_PROG(restrict_file_access, struct file *file, int mask) {
 SEC("lsm/path_unlink")
 int BPF_PROG(restrict_file_deletion, const struct path *dir,
              struct dentry *dentry) {
-  const unsigned char *name = dentry->d_name.name;
-  char filename[BUFFER_LENGTH] = {0};
-  bpf_probe_read_kernel_str(&filename, sizeof(filename), name);
-  if (bpf_map_lookup_elem(&restricted_files, &filename) != NULL) {
+  char parentpath[BUFFER_LENGTH] = {0};
+  char name[BUFFER_LENGTH] = {0};
+
+  bpf_d_path((struct path *)dir, name, sizeof(name));
+  bpf_probe_read_kernel_str(&parentpath, sizeof(parentpath), name);
+  if (bpf_map_lookup_elem(&restricted_directories, parentpath) != NULL) {
     return -EACCES;
   }
   return 0;

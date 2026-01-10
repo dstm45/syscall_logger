@@ -48,6 +48,10 @@ func Initialize() (*Loader, error) {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	err = RestrictDirectories(loader)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	return &loader, nil
 }
 

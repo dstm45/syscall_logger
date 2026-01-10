@@ -33,9 +33,20 @@ func isExcluded(arr [64]int8) bool {
 
 func RestrictFiles(l Loader) error {
 	var key [64]byte
-	copy(key[:], []byte("secret.txt"))
+	copy(key[:], []byte("/home/monga/code/ebpf/syscall_logger/secret.txt"))
 	value := uint32(1)
 	err := l.MainObject.RestrictedFiles.Update(key, value, ebpf.UpdateAny)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func RestrictDirectories(l Loader) error {
+	var key [64]byte
+	copy(key[:], []byte("/home/monga/code/ebpf/syscall_logger"))
+	value := uint32(1)
+	err := l.MainObject.RestrictedDirectories.Update(key, value, ebpf.UpdateAny)
 	if err != nil {
 		return err
 	}
