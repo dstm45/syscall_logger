@@ -1,0 +1,80 @@
+#include "vmlinux.h"
+#include <asm-generic/errno-base.h>
+#include <bpf/bpf_helpers.h>
+#include <bpf/bpf_tracing.h>
+
+#define BUFFER_LENGTH 64
+#define MAX_ENTRIES 10240
+
+struct data_t {
+  char process_name[BUFFER_LENGTH];
+  char filename[BUFFER_LENGTH];
+  u32 uid;
+};
+
+struct {
+  __uint(type, BPF_MAP_TYPE_HASH);
+  __uint(max_entries, MAX_ENTRIES);
+  __type(key, u64);
+  __type(value, struct data_t);
+} datatable SEC(".maps");
+
+struct {
+  __uint(type, BPF_MAP_TYPE_HASH);
+  __uint(max_entries, MAX_ENTRIES);
+  __type(key, char[BUFFER_LENGTH]);
+  __type(value, u32);
+} restricted_files SEC(".maps");
+
+char LICENSE[] SEC("license") = "GPL";
+
+SEC("tracepoint/syscalls/sys_enter_openat")
+int trace_files(struct trace_event_raw_sys_enter *ctx) {
+  struct data_t data = {};
+  data.uid = (u32)bpf_get_current_uid_gid();
+  u64 pid_tgid = bpf_get_current_pid_tgid();
+  char buffer[BUFFER_LENGTH];
+  int is_command_name_available =
+      bpf_get_current_comm(&data.process_name, sizeof(data.process_name)) == 0;
+  int is_filename_available =
+      bpf_probe_read_user_str(&data.filename, sizeof(data.filename),
+                              (const char *)ctx->args[1]) >= 0;
+  if (is_command_name_available && is_filename_available) {
+    bpf_map_update_elem(&datatable, &pid_tgid, &data, BPF_ANY);
+  }
+  return 0;
+}
+
+SEC("tracepoint/syscalls/sys_exit_openat")
+int check_files(struct trace_event_raw_sys_exit *ctx) {
+  u64 pid_tgid = bpf_get_current_pid_tgid();
+  if (ctx->ret >= 0) {
+    return 0;
+  } else {
+    bpf_map_delete_elem(&datatable, &pid_tgid);
+  }
+  return 0;
+}
+
+SEC("lsm/file_open")
+int BPF_PROG(restrict_file_access, struct file *file, int mask) {
+  const unsigned char *name = file->f_path.dentry->d_name.name;
+  char filename[BUFFER_LENGTH] = {0};
+  bpf_probe_read_kernel_str(&filename, sizeof(filename), name);
+  if (bpf_map_lookup_elem(&restricted_files, &filename) != NULL) {
+    return -EACCES;
+  }
+  return 0;
+}
+
+SEC("lsm/path_unlink")
+int BPF_PROG(restrict_file_deletion, const struct path *dir,
+             struct dentry *dentry) {
+  const unsigned char *name = dentry->d_name.name;
+  char filename[BUFFER_LENGTH] = {0};
+  bpf_probe_read_kernel_str(&filename, sizeof(filename), name);
+  if (bpf_map_lookup_elem(&restricted_files, &filename) != NULL) {
+    return -EACCES;
+  }
+  return 0;
+}
