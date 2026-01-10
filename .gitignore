@@ -1,0 +1,7 @@
+main_bpfeb.o
+main_bpfel.o
+main_bpfeb.go
+main_bpfel.go
+bpf/vmlinux.h
+syscall_logger
+secret.txt
