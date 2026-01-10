@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/cilium/ebpf/rlimit"
+	"github.com/dstm45/syscall_logger/cmd/build"
+	"github.com/dstm45/syscall_logger/internal/handler"
 )
 
 func main() {
@@ -16,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	init, err := Initialize()
+	init, err := handler.Initialize()
 	if err != nil {
 		log.Fatalln("Erreur lors du chargment des programmes dans le kernel", err)
 	}
@@ -38,14 +40,14 @@ func main() {
 			return
 		case <-ticker.C:
 			var key uint64
-			var value mainDataT
+			var value build.MainDataT
 
 			mapIterator := init.MainObject.Datatable.Iterate()
 			for mapIterator.Next(&key, &value) {
-				if isExcluded(value.Filename) {
+				if handler.IsExcluded(value.Filename) {
 					continue
 				}
-				log.Printf("[commande]: %s [pid]: %d [filename]: %s [uid]: %d", int8ToString(value.ProcessName), key>>32, int8ToString(value.Filename), value.Uid)
+				log.Printf("[commande]: %s [pid]: %d [filename]: %s [uid]: %d", handler.Int8ToString(value.ProcessName), key>>32, handler.Int8ToString(value.Filename), value.Uid)
 				init.MainObject.Datatable.Delete(&key)
 			}
 			if err := mapIterator.Err(); err != nil {

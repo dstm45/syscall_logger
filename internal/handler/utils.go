@@ -1,5 +1,5 @@
-// Package utils contient tous les fonctions utilitaires
-package main
+// Package handler contient tous les fonctions utilitaires
+package handler
 
 import (
 	"strings"
@@ -7,7 +7,7 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-func int8ToString(arr [64]int8) string {
+func Int8ToString(arr [64]int8) string {
 	b := make([]byte, 0, len(arr))
 
 	for _, v := range arr {
@@ -20,8 +20,8 @@ func int8ToString(arr [64]int8) string {
 	return string(b)
 }
 
-func isExcluded(arr [64]int8) bool {
-	filepath := int8ToString(arr)
+func IsExcluded(arr [64]int8) bool {
+	filepath := Int8ToString(arr)
 	excludeDirs := []string{"/dev", "/proc", "/var", "/run"}
 	for _, dir := range excludeDirs {
 		if strings.Contains(filepath, dir) {

@@ -1,9 +1,10 @@
-package main
+package handler
 
 import (
 	"log"
 
 	"github.com/cilium/ebpf/link"
+	"github.com/dstm45/syscall_logger/cmd/build"
 )
 
 type Loader struct {
@@ -11,12 +12,12 @@ type Loader struct {
 	OpenatExit    link.Link
 	LsmFileOpen   link.Link
 	LsmPathUnlink link.Link
-	MainObject    mainObjects
+	MainObject    build.MainObjects
 }
 
 func Initialize() (*Loader, error) {
-	var objets mainObjects
-	err := loadMainObjects(&objets, nil)
+	var objets build.MainObjects
+	err := build.LoadMainObjects(&objets, nil)
 	if err != nil {
 		return nil, err
 	}
