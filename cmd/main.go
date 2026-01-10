@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/cilium/ebpf/rlimit"
-	"github.com/dstm45/syscall_logger/cmd/build"
+	"github.com/dstm45/syscall_logger/build"
 	"github.com/dstm45/syscall_logger/internal/handler"
 )
 

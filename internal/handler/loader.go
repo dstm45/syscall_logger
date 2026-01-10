@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/cilium/ebpf/link"
-	"github.com/dstm45/syscall_logger/cmd/build"
+	"github.com/dstm45/syscall_logger/build"
 )
 
 type Loader struct {
