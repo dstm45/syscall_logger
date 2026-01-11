@@ -47,7 +47,7 @@ func main() {
 				if handler.IsExcluded(value.Filename) {
 					continue
 				}
-				log.Printf("[commande]: %s [pid]: %d [filename]: %s [uid]: %d", handler.Int8ToString(value.ProcessName), key>>32, handler.Int8ToString(value.Filename), value.Uid)
+				log.Printf("[commande]: %s [pid]: %d [filename]: %s [uid]: %d", handler.Int8ToString(value.ProcessName), value.Pid, handler.Int8ToString(value.Filename), value.Uid)
 				init.MainObject.Datatable.Delete(&key)
 			}
 			if err := mapIterator.Err(); err != nil {
