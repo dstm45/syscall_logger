@@ -48,7 +48,7 @@ Pour compiler et exécuter ce projet, vous devez configurer votre environnement 
     `bpf2go` est un outil Go qui facilite l'intégration des programmes eBPF. Installez-le avec la commande suivante :
 
     ```bash
-    go get -tool [github.com/cilium/ebpf/cmd/bpf2go@latest](https://github.com/cilium/ebpf/cmd/bpf2go@latest)
+    go get -tool https://github.com/cilium/ebpf/cmd/bpf2go@latest
     ```
 
 3.  **Générer `vmlinux.h`**
