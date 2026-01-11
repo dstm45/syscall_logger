@@ -1,9 +1,11 @@
 #include "vmlinux.h"
 #include <asm-generic/errno-base.h>
+#include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
 
 #define BUFFER_LENGTH 64
+#define PROCESS_LENGTH 16
 #define MAX_ENTRIES 10240
 
 struct data_t {
@@ -38,33 +40,35 @@ char LICENSE[] SEC("license") = "GPL";
 
 SEC("tracepoint/syscalls/sys_enter_openat")
 int trace_files(struct trace_event_raw_sys_enter *ctx) {
-  u64 pid_tgid = bpf_get_current_pid_tgid();
-  u32 pid = (u32)pid_tgid;
-  struct data_t data = {};
-  data.uid = (u32)bpf_get_current_uid_gid();
-  data.pid = pid_tgid >> 32;
-  char buffer[BUFFER_LENGTH];
-  int is_command_name_available =
-      bpf_get_current_comm(&data.process_name, sizeof(data.process_name)) == 0;
-  int is_filename_available =
-      bpf_probe_read_user_str(&data.filename, sizeof(data.filename),
-                              (const char *)ctx->args[1]) >= 0;
-  if (is_command_name_available && is_filename_available) {
-    if (bpf_map_lookup_elem(&datatable, &pid) == NULL) {
-      bpf_map_update_elem(&datatable, &pid, &data, BPF_ANY);
-    }
+  struct task_struct *current_task =
+      (struct task_struct *)bpf_get_current_task();
+  struct task_struct *parent_task = BPF_CORE_READ(current_task, real_parent);
+  struct tty_struct *tty = BPF_CORE_READ(parent_task, signal, tty);
+  u32 parent_pid = BPF_CORE_READ(parent_task, pid);
+  u32 parent_tgid = BPF_CORE_READ(parent_task, tgid);
+  if (tty != NULL && parent_pid == parent_tgid) {
+    struct data_t data = {};
+    bpf_probe_read_kernel_str(data.process_name, sizeof(data.process_name),
+                              BPF_CORE_READ(current_task, comm));
+    data.uid = (u32)bpf_get_current_uid_gid();
+    data.pid = BPF_CORE_READ(current_task, pid);
+    bpf_probe_read_user_str(data.filename, sizeof(data.filename),
+                            (char *)ctx->args[1]);
+    bpf_map_update_elem(&datatable, &parent_tgid, &data, BPF_ANY);
   }
   return 0;
 }
 
 SEC("tracepoint/syscalls/sys_exit_openat")
 int check_files(struct trace_event_raw_sys_exit *ctx) {
-  u64 pid_tgid = bpf_get_current_pid_tgid();
-  u32 pid = (u32)pid_tgid;
+  struct task_struct *current_task =
+      (struct task_struct *)bpf_get_current_task();
+  struct task_struct *parent_task = BPF_CORE_READ(current_task, real_parent);
+  u32 parent_tgid = BPF_CORE_READ(parent_task, tgid);
   if (ctx->ret >= 0) {
     return 0;
   } else {
-    bpf_map_delete_elem(&datatable, &pid);
+    bpf_map_delete_elem(&datatable, &parent_tgid);
   }
   return 0;
 }

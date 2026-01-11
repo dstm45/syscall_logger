@@ -39,7 +39,7 @@ func main() {
 			log.Println("Fermeture du programme...")
 			return
 		case <-ticker.C:
-			var key uint64
+			var key uint32
 			var value build.MainDataT
 
 			mapIterator := init.MainObject.Datatable.Iterate()
