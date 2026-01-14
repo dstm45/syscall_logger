@@ -1,0 +1,4 @@
+restricted_files:
+  - /home/monga/code/ebpf/syscall_logger/secret.txt
+restricted_directories:
+  - /home/monga/code/ebpf/syscall_logger

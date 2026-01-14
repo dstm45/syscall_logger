@@ -53,7 +53,7 @@ int trace_files(struct trace_event_raw_sys_enter *ctx) {
     data.uid = (u32)bpf_get_current_uid_gid();
     data.pid = BPF_CORE_READ(current_task, pid);
     bpf_probe_read_user_str(data.filename, sizeof(data.filename),
-                            (char *)ctx->args[1]);
+                            (const char *)ctx->args[1]);
     bpf_map_update_elem(&datatable, &parent_tgid, &data, BPF_ANY);
   }
   return 0;
@@ -95,7 +95,7 @@ int BPF_PROG(restrict_file_deletion, const struct path *dir,
 
   bpf_d_path((struct path *)dir, name, sizeof(name));
   bpf_probe_read_kernel_str(&parentpath, sizeof(parentpath), name);
-  if (bpf_map_lookup_elem(&restricted_directories, parentpath) != NULL) {
+  if (bpf_map_lookup_elem(&restricted_directories, &parentpath) != NULL) {
     return -EACCES;
   }
   return 0;

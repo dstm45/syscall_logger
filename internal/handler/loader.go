@@ -45,11 +45,7 @@ func Initialize() (*Loader, error) {
 		LsmPathUnlink: RestrictFileDeletion,
 		MainObject:    objets,
 	}
-	err = RestrictFiles(loader)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	err = RestrictDirectories(loader)
+	err = RestrictFilesAndDirectories(loader)
 	if err != nil {
 		log.Fatalln(err)
 	}

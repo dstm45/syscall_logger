@@ -5,3 +5,4 @@ main_bpfel.go
 vmlinux.h
 syscall_logger
 secret.txt
+secret
